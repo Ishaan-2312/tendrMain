@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   DragDropContext,
   Droppable,
   Draggable,
 } from "@hello-pangea/dnd";
 import BasicSpeedDial from "../../components/BasicSpeedDial";
+
+const BASE_URL = "https://tendr-backend-75ag.onrender.com";
 
 // Hardcoded default tasks for different events
 const defaultTasks = {
@@ -34,56 +37,134 @@ const reorder = (list, startIndex, endIndex) => {
 
 export default function CheckBox() {
   const [events, setEvents] = useState([]);
+  const [checklistId, setChecklistId] = useState(null);
   const [preview, setPreview] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // Fetch checklists from backend on mount
   useEffect(() => {
-    const stored = localStorage.getItem("checkbox");
-    if (stored) {
-      setEvents(JSON.parse(stored));
-    }
+    setLoading(true);
+    axios.get(`${BASE_URL}/api/checklists`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    })
+      .then(res => {
+        // Use first checklist for now
+        if (res.data && res.data.length > 0) {
+          setEvents(res.data[0].items || []);
+          setChecklistId(res.data[0]._id);
+        }
+      })
+      .catch(err => console.error("Fetch checklists error:", err))
+      .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("checkbox", JSON.stringify(events));
-  }, [events]);
-
-  const handleSelectEvent = (e) => {
+  const handleSelectEvent = async (e) => {
     const value = e.target.value;
     setSelectedEvent(value);
     if (value && defaultTasks[value]) {
       setEvents(defaultTasks[value]); // load defaults
+      // Update backend
+      if (checklistId) {
+        try {
+          await axios.put(`${BASE_URL}/api/checklists/${checklistId}`,
+            { items: defaultTasks[value] },
+            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          );
+        } catch (err) {
+          console.error("Set default checklist error:", err);
+        }
+      }
     } else {
       setEvents([]);
     }
   };
 
-  const addEvent = () => {
+  const addEvent = async () => {
     const newEvent = {
       id: Date.now().toString(),
       title: "",
       description: "",
       checked: false,
     };
-    setEvents([...events, newEvent]);
+    const updatedEvents = [...events, newEvent];
+    setEvents(updatedEvents);
+    // Update backend
+    if (checklistId) {
+      try {
+        await axios.put(`${BASE_URL}/api/checklists/${checklistId}`,
+          { items: updatedEvents },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("Add event error:", err);
+      }
+    }
   };
 
-  const updateEvent = (id, field, value) => {
-    setEvents(events.map(e => (e.id === id ? { ...e, [field]: value } : e)));
+  const updateEvent = async (id, field, value) => {
+    const updatedEvents = events.map(e => (e.id === id ? { ...e, [field]: value } : e));
+    setEvents(updatedEvents);
+    // Update backend
+    if (checklistId) {
+      try {
+        await axios.put(`${BASE_URL}/api/checklists/${checklistId}`,
+          { items: updatedEvents },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("Update event error:", err);
+      }
+    }
   };
 
-  const toggleCheckbox = (id) => {
-    setEvents(events.map(e => (e.id === id ? { ...e, checked: !e.checked } : e)));
+  const toggleCheckbox = async (id) => {
+    const updatedEvents = events.map(e => (e.id === id ? { ...e, checked: !e.checked } : e));
+    setEvents(updatedEvents);
+    // Update backend
+    if (checklistId) {
+      try {
+        await axios.put(`${BASE_URL}/api/checklists/${checklistId}`,
+          { items: updatedEvents },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("Toggle checkbox error:", err);
+      }
+    }
   };
 
-  const deleteEvent = (id) => {
-    setEvents(events.filter(e => e.id !== id));
+  const deleteEvent = async (id) => {
+    const updatedEvents = events.filter(e => e.id !== id);
+    setEvents(updatedEvents);
+    // Update backend
+    if (checklistId) {
+      try {
+        await axios.put(`${BASE_URL}/api/checklists/${checklistId}`,
+          { items: updatedEvents },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("Delete event error:", err);
+      }
+    }
   };
 
-  const onDragEnd = (result) => {
+  const onDragEnd = async (result) => {
     if (!result.destination) return;
     const reordered = reorder(events, result.source.index, result.destination.index);
     setEvents(reordered);
+    // Update backend
+    if (checklistId) {
+      try {
+        await axios.put(`${BASE_URL}/api/checklists/${checklistId}`,
+          { items: reordered },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("Reorder error:", err);
+      }
+    }
   };
 
   const exportTimeline = () => {

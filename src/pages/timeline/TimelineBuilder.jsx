@@ -1,39 +1,112 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
-export default function TimelineBuilder() {
-  const [events, setEvents] = useState([
-    { id: "1", title: "Event 1", description: "Description 1", checked: false },
-    { id: "2", title: "Event 2", description: "Description 2", checked: false },
-  ]);
+const BASE_URL = "https://tendr-backend-75ag.onrender.com";
 
+export default function TimelineBuilder() {
+  const [events, setEvents] = useState([]);
+  const [timelineId, setTimelineId] = useState(null);
   const [preview, setPreview] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch timelines from backend on mount
+  useEffect(() => {
+    setLoading(true);
+    axios
+      .get(`${BASE_URL}/api/timelines`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      })
+      .then((res) => {
+        // Use first timeline for now
+        if (res.data && res.data.length > 0) {
+          setEvents(res.data[0].items || []);
+          setTimelineId(res.data[0]._id);
+        }
+      })
+      .catch((err) => console.error("Fetch timelines error:", err))
+      .finally(() => setLoading(false));
+  }, []);
 
   // Drag and drop reorder
-  const handleDragEnd = (result) => {
+  const handleDragEnd = async (result) => {
     if (!result.destination) return;
     const items = Array.from(events);
     const [reordered] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reordered);
     setEvents(items);
+    // Update backend
+    if (timelineId) {
+      try {
+        await axios.put(
+          `${BASE_URL}/api/timelines/${timelineId}`,
+          { items },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("Reorder error:", err);
+      }
+    }
   };
 
   // Add new event
-  const addEvent = () => {
-    setEvents([
-      ...events,
-      { id: Date.now().toString(), title: "", description: "", checked: false },
-    ]);
+  const addEvent = async () => {
+    const newEvent = {
+      id: Date.now().toString(),
+      title: "",
+      description: "",
+      checked: false,
+    };
+    const updatedEvents = [...events, newEvent];
+    setEvents(updatedEvents);
+    // Update backend
+    if (timelineId) {
+      try {
+        await axios.put(
+          `${BASE_URL}/api/timelines/${timelineId}`,
+          { items: updatedEvents },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("Add event error:", err);
+      }
+    }
   };
 
   // Update field
-  const updateEvent = (id, field, value) => {
-    setEvents(events.map((e) => (e.id === id ? { ...e, [field]: value } : e)));
+  const updateEvent = async (id, field, value) => {
+    const updatedEvents = events.map((e) => (e.id === id ? { ...e, [field]: value } : e));
+    setEvents(updatedEvents);
+    // Update backend
+    if (timelineId) {
+      try {
+        await axios.put(
+          `${BASE_URL}/api/timelines/${timelineId}`,
+          { items: updatedEvents },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("Update event error:", err);
+      }
+    }
   };
 
   // Toggle checkbox
-  const toggleCheckbox = (id) => {
-    setEvents(events.map((e) => (e.id === id ? { ...e, checked: !e.checked } : e)));
+  const toggleCheckbox = async (id) => {
+    const updatedEvents = events.map((e) => (e.id === id ? { ...e, checked: !e.checked } : e));
+    setEvents(updatedEvents);
+    // Update backend
+    if (timelineId) {
+      try {
+        await axios.put(
+          `${BASE_URL}/api/timelines/${timelineId}`,
+          { items: updatedEvents },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("Toggle checkbox error:", err);
+      }
+    }
   };
 
   return (
@@ -48,7 +121,9 @@ export default function TimelineBuilder() {
         </button>
       </div>
 
-      {preview ? (
+      {loading ? (
+        <div className="text-center py-10 text-gray-500">Loading timeline...</div>
+      ) : preview ? (
         // -------------------- Preview Mode --------------------
         <div className="relative">
           {/* vertical line in the center */}
@@ -99,7 +174,11 @@ export default function TimelineBuilder() {
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="timeline">
               {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                <div
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className="space-y-4"
+                >
                   {events.map((event, index) => (
                     <Draggable key={event.id} draggableId={event.id} index={index}>
                       {(provided) => (

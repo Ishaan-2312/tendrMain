@@ -30,6 +30,13 @@ import MakeAGroup_Nav from "../../components/MakeAGroup_Nav.jsx";
 import EventFormSummary from "../../components/EventFormSummary.jsx";
 
 const EventPlanning = () => {
+  // Navigation handlers for checklist and timeline
+  const handleGoToChecklist = () => {
+    navigate('/prebuilt-checklist');
+  };
+  const handleGoToTimeline = () => {
+    navigate('/prebuilt-timeline');
+  };
   const navigate = useNavigate();
   const location = useLocation();
   const [activeModal, setActiveModal] = useState(null);
@@ -216,6 +223,12 @@ const EventPlanning = () => {
               </p>
             </div>
 
+            {/* Extra Requirements Section ...existing code... */}
+            {/* ...existing extra requirements code... */}
+
+            {/* ...existing extra requirements code... */}
+
+            
             {/* Options VendorTypes */}
             <div className="grid md:grid-cols-4 gap-8 mb-12">
               {vendors.map((vendor) => (
@@ -294,6 +307,22 @@ const EventPlanning = () => {
                 </div>
               )}
             </div>
+            {/* <div className="flex flex-row gap-12 justify-center mt-6">
+              <button
+                onClick={handleGoToChecklist}
+                className="px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 shadow"
+                style={{ minWidth: 180 }}
+              >
+                View Event Checklist
+              </button>
+              <button
+                onClick={handleGoToTimeline}
+                className="px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 shadow"
+                style={{ minWidth: 180 }}
+              >
+                View Event Timeline
+              </button>
+            </div> */}
 
             {/* Review Booking Button */}
             <div className="text-center mt-8">
